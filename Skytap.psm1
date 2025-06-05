@@ -44,27 +44,30 @@ function Set-Authorization ([string]$tokenfile='user_token', [string]$user, [str
     .EXAMPLE
       Add-ConfigurationToProject 12345 54321
 #>
-	  if ($user) {    #use params instead of file 
-		  $username = $user
-		  $password = $pwd
-	  } else {
-		  if (Test-Path $tokenfile) {
-			Get-Content $tokenfile | Foreach-Object{
-			   $var = $_.Split('=')
-			   Set-Variable -Name $var[0] -Value $var[1]
-				}
-		  } else {
-				Write-host "The user_token file $tokenfile was not found" -foregroundcolor "magenta"
-		  		return -1 }
-		
-		
-	  }
-	Write-host "Skytap user is $username"
-	$auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username,$password)))
-	$global:headers = @{"Accept" = "application/json"; Authorization=("Basic {0}" -f $auth)}
-	$global:logfile = $logfile
-	$global:account = $account
-	return 0
+    if ($user) {    # use params instead of file 
+        $username = $user
+        $password = $pwd
+    } else {
+        if (Test-Path $tokenfile) {
+            foreach ($line in Get-Content -Path $tokenfile) {
+                $var = $line.Split('=', 2)
+                if ($var.Length -eq 2) {
+                    $name = $var[0].Trim()
+                    $value = $var[1].Trim()
+                    Set-Variable -Name $name -Value $value -Scope Script
+                }
+            }
+        } else {
+            Write-Host "The user_token file $tokenfile was not found" -ForegroundColor "Magenta"
+            return -1
+        }
+    }
+    Write-Host "Skytap user is $username"
+    $auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username, $password)))
+    $global:headers = @{"Accept" = "application/json"; Authorization = ("Basic {0}" -f $auth)}
+    $global:logfile = $logfile
+    $global:account = $account
+    return 0
 }
 
 Set-Authorization
@@ -1860,6 +1863,7 @@ function Send-SharedDrive([string]$localFilename, [string]$remoteFilename)
 			$upcontent = gc -en byte $localfile
 			$freq.ContentLength = $upcontent.Length
 			$Run = $freq.GetRequestStream()
+		
 			$Run.Write($upcontent, 0, $upcontent.Length)
 			$Run.Close()
 			$Run.Dispose()
@@ -2252,10 +2256,10 @@ function Copy-TemplateToRegion([string]$templateId,[string]$target_region,[strin
 
 Export-ModuleMember -function * -alias *
 
-		
 
 
 
-			
+
+
 
 
