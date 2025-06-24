@@ -1,3 +1,6 @@
 skytap.psd1~
 Skytap.psm1~
 README.md~
+# Python artifacts
+__pycache__/
+*.pyc
