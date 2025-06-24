@@ -2,6 +2,7 @@ import base64
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 import socket
 from ftplib import FTP
 
@@ -313,3 +314,151 @@ class SkytapClient:
             ftp.cwd("shared_drive")
             with open(local_filename, "rb") as fh:
                 ftp.storbinary(f"STOR {remote_filename}", fh)
+
+    def add_schedule(
+        self,
+        object_id: str,
+        title: str,
+        schedule_actions: List[Dict[str, Any]],
+        start_at: str,
+        *,
+        stype: str = "config",
+        recurring_days: Optional[str] = None,
+        end_at: Optional[str] = None,
+        timezone: str = "Pacific Time (US & Canada)",
+        delete_at_end: bool = False,
+    ) -> Any:
+        """Create a schedule for a configuration or template."""
+        body: Dict[str, Any] = {
+            "title": title,
+            "start_at": start_at,
+            "time_zone": timezone,
+            "actions": schedule_actions,
+        }
+        if stype == "config":
+            body["configuration_id"] = object_id
+        else:
+            body["template_id"] = object_id
+        if end_at:
+            body["end_at"] = end_at
+        if recurring_days:
+            body["recurring_days"] = recurring_days
+        if delete_at_end:
+            body["delete_at_end"] = True
+        return self._request("POST", "/schedules", json=body)
+
+    def get_usage(
+        self,
+        rid: str = "0",
+        start_at: Optional[str] = None,
+        end_at: Optional[str] = None,
+        resource: str = "svms",
+        region: str = "all",
+        agg: str = "month",
+        groupby: str = "user",
+        fmt: str = "csv",
+    ) -> Any:
+        """Create or retrieve a usage report."""
+        if rid == "0":
+            body = {
+                "start_date": start_at,
+                "end_date": end_at,
+                "resource_type": resource,
+                "region": region,
+                "group_by": groupby,
+                "aggregate_by": agg,
+                "results_format": fmt,
+                "utc": True,
+                "notify_by_email": False,
+            }
+            return self._request("POST", "/reports", json=body)
+        result = self._request("GET", f"/reports/{rid}")
+        if isinstance(result, dict) and result.get("ready"):
+            return self._request("GET", f"/reports/{rid}.csv")
+        return result
+
+    def get_audit_report(
+        self,
+        rid: str = "0",
+        start_at: Optional[datetime] = None,
+        end_at: Optional[datetime] = None,
+        activity: str = "",
+    ) -> Any:
+        """Create or retrieve an audit report."""
+        if rid == "0":
+            if not (start_at and end_at):
+                raise ValueError("start_at and end_at are required for new report")
+            body = {
+                "date_start": {
+                    "year": start_at.year,
+                    "month": start_at.month,
+                    "day": start_at.day,
+                    "hour": start_at.hour,
+                    "minute": start_at.minute,
+                },
+                "date_end": {
+                    "year": end_at.year,
+                    "month": end_at.month,
+                    "day": end_at.day,
+                    "hour": end_at.hour,
+                    "minute": end_at.minute,
+                },
+                "activity": activity,
+                "notify_by_email": False,
+            }
+            return self._request("POST", "/auditing/exports", json=body)
+        result = self._request("GET", f"/auditing/exports/{rid}")
+        if isinstance(result, dict) and result.get("ready"):
+            return self._request("GET", f"/auditing/exports/{rid}.csv")
+        return result
+
+    def get_public_ips(self) -> Any:
+        """Return the list of public IPs for the account."""
+        return self._request("GET", "/ips")
+
+    def get_schedules(self, schedule_id: Optional[str] = None) -> Any:
+        path = f"/schedules/{schedule_id}" if schedule_id else "/schedules"
+        return self._request("GET", path)
+
+    def connect_public_ip(self, vm_id: str, interface_id: str, public_ip: str) -> Any:
+        body = {"ip": public_ip}
+        return self._request(
+            "POST",
+            f"/vms/{vm_id}/interfaces/{interface_id}/ips",
+            json=body,
+        )
+
+    def publish_service(
+        self,
+        config_id: str,
+        vm_id: str,
+        interface_id: str,
+        service_id: str,
+        port: str,
+    ) -> Any:
+        body = {"port": port}
+        return self._request(
+            "POST",
+            f"/configurations/{config_id}/vms/{vm_id}/interfaces/{interface_id}/services/{service_id}",
+            json=body,
+        )
+
+    def remove_tag(self, config_id: str, tag_id: str) -> Any:
+        if tag_id.lower() == "all":
+            tags = self.get_tags(config_id=config_id) or []
+            results = []
+            for tag in tags:
+                tid = tag.get("id") if isinstance(tag, dict) else tag
+                try:
+                    results.append(
+                        self._request(
+                            "DELETE",
+                            f"/configurations/{config_id}/tags/{tid}",
+                        )
+                    )
+                except requests.HTTPError:
+                    results.append(None)
+            return results
+        return self._request(
+            "DELETE", f"/configurations/{config_id}/tags/{tag_id}"
+        )
