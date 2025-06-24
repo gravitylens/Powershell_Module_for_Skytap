@@ -11,10 +11,16 @@ import requests
 class SkytapClient:
     """Simple Python client for the Skytap REST API."""
 
-    def __init__(self, base_url: str = "https://cloud.skytap.com", logfile: str = "skytap.log") -> None:
+    def __init__(
+        self,
+        base_url: str = "https://cloud.skytap.com",
+        logfile: str = "skytap.log",
+        env_file: str = ".env",
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.headers: Dict[str, str] = {"Accept": "application/json"}
         self.logfile = logfile
+        self.env_file = env_file
 
     def log_write(self, message: str) -> None:
         """Append a timestamped message to the configured log file."""
@@ -51,23 +57,20 @@ class SkytapClient:
             "eDescription": str(exc),
         }
 
-    def set_authorization(
-        self, tokenfile: str = "user_token", user: Optional[str] = None, password: Optional[str] = None
-    ) -> None:
-        """Load credentials from a token file or explicit parameters."""
-        if user is None:
-            path = Path(tokenfile)
-            if not path.exists():
-                raise FileNotFoundError(f"The user_token file {tokenfile} was not found")
-            creds = {}
-            for line in path.read_text().splitlines():
-                if "=" in line:
-                    k, v = line.split("=", 1)
-                    creds[k.strip()] = v.strip()
-            user = creds.get("username")
-            password = creds.get("password")
+    def set_authorization(self, env_file: Optional[str] = None) -> None:
+        """Load credentials from a .env file."""
+        path = Path(env_file or self.env_file)
+        if not path.exists():
+            raise FileNotFoundError(f"The .env file {path} was not found")
+        creds: Dict[str, str] = {}
+        for line in path.read_text().splitlines():
+            if "=" in line:
+                k, v = line.split("=", 1)
+                creds[k.strip()] = v.strip()
+        user = creds.get("username")
+        password = creds.get("password")
         if user is None or password is None:
-            raise ValueError("Username and password required")
+            raise ValueError("username and password must be provided in the .env file")
         token = base64.b64encode(f"{user}:{password}".encode("ascii")).decode("ascii")
         self.headers["Authorization"] = f"Basic {token}"
 
