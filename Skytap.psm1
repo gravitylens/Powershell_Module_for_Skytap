@@ -34,31 +34,25 @@ function LogWrite ([string]$logthis) {              # logwrite INFO This is Info
 }	
 	
 
-function Set-Authorization ([string]$tokenfile='user_token', [string]$user, [string]$pwd) {
+function Set-Authorization ([string]$envFile = '.env') {
 <#
     .SYNOPSIS
-      Creates authorization headers from file or parameters
+      Creates authorization headers from credentials in a .env file
     .SYNTAX
-       Add-ConfigurationToProject EnvironmentId ProjectId
+       Set-Authorization [-envFile <path>]
     .EXAMPLE
-      Add-ConfigurationToProject 12345 54321
+      Set-Authorization -envFile "C:\\skytap\\.env"
 #>
-	  if ($user) {    #use params instead of file 
-		  $username = $user
-		  $password = $pwd
-	  } else {
-		  if (Test-Path $tokenfile) {
-			Get-Content $tokenfile | Foreach-Object{
-			   $var = $_.Split('=')
-			   Set-Variable -Name $var[0] -Value $var[1]
-				}
-		  } else {
-				Write-host "The user_token file $tokenfile was not found" -foregroundcolor "magenta"
-		  		return -1 }
-		
-		
-	  }
-	Write-host "Skytap user is $username"
+        if (Test-Path $envFile) {
+                Get-Content $envFile | Foreach-Object{
+                   $var = $_.Split('=')
+                   Set-Variable -Name $var[0] -Value $var[1]
+                }
+        } else {
+                Write-host ".env file $envFile was not found" -foregroundcolor "magenta"
+                return -1 }
+
+       Write-host "Skytap user is $username"
 	$auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username,$password)))
 	$global:headers = @{"Accept" = "application/json"; Authorization=("Basic {0}" -f $auth)}
 	$global:logfile = $logfile
