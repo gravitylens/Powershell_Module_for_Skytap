@@ -12,9 +12,45 @@ import requests
 class SkytapClient:
     """Simple Python client for the Skytap REST API."""
 
-    def __init__(self, base_url: str = "https://cloud.skytap.com") -> None:
+    def __init__(self, base_url: str = "https://cloud.skytap.com", logfile: str = "skytap.log") -> None:
         self.base_url = base_url.rstrip("/")
         self.headers: Dict[str, str] = {"Accept": "application/json"}
+        self.logfile = logfile
+
+    def log_write(self, message: str) -> None:
+        """Append a timestamped message to the configured log file."""
+        ts = datetime.now().isoformat()
+        with open(self.logfile, "a", encoding="utf-8") as fh:
+            fh.write(f"{ts}  {message}\n")
+
+    def show_request_failure(self, exc: Exception) -> Dict[str, Any]:
+        """Return structured information about a failed request."""
+        if isinstance(exc, requests.HTTPError):
+            resp = exc.response
+            return {
+                "requestResultCode": resp.status_code if resp else -1,
+                "eDescription": resp.reason if resp else str(exc),
+                "eMessage": resp.text if resp else str(exc),
+                "method": resp.request.method if resp and resp.request else "",
+            }
+        return {
+            "requestResultCode": getattr(exc, "errno", -1),
+            "eDescription": exc.__class__.__name__,
+            "eMessage": str(exc),
+            "method": "",
+        }
+
+    def show_web_request_failure(self, exc: Exception) -> Dict[str, Any]:
+        """Simplified failure information used by the PowerShell module."""
+        if isinstance(exc, requests.HTTPError) and exc.response is not None:
+            return {
+                "requestResultCode": exc.response.status_code,
+                "eDescription": exc.response.reason,
+            }
+        return {
+            "requestResultCode": -1,
+            "eDescription": str(exc),
+        }
 
     def set_authorization(
         self, tokenfile: str = "user_token", user: Optional[str] = None, password: Optional[str] = None
