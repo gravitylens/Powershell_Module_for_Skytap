@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 import socket
-from ftplib import FTP
 
 import requests
 
@@ -335,21 +334,6 @@ class SkytapClient:
         resp = requests.get(f"http://{meta_ip}/skytap")
         resp.raise_for_status()
         return resp.json()
-
-    def send_shared_drive(
-        self,
-        local_filename: str,
-        remote_filename: str,
-        ftp_region: str,
-        ftp_user: str,
-        ftp_password: str,
-    ) -> None:
-        """Upload a file to the Skytap shared drive via FTP."""
-        with FTP(ftp_region) as ftp:
-            ftp.login(ftp_user, ftp_password)
-            ftp.cwd("shared_drive")
-            with open(local_filename, "rb") as fh:
-                ftp.storbinary(f"STOR {remote_filename}", fh)
 
     def add_schedule(
         self,
