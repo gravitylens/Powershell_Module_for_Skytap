@@ -71,6 +71,8 @@ function Set-Authorization ([string]$tokenfile='user_token', [string]$user, [str
 }
 
 Set-Authorization
+# Ensure TLS 1.2 is enabled (required by Skytap; Windows PowerShell 5.1 does not enable it by default)
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch {}
 $global:url = "https://cloud.skytap.com"
 $global:tOffset = 0
 $global:errorResponse = ''
@@ -969,7 +971,7 @@ function Get-Projects ([string]$projectId,[string]$attributes,[string]$v2="T",[i
 								}
 							}
 						write-host $uri
-						$result = Invoke-RestMethod -Uri $uri -Method GET -ContentType 'application/json' -Headers $global:headers  	 									
+						$result = Invoke-WebRequest -Uri $uri -Method GET -UseBasicParsing -ContentType 'application/json' -Headers $global:headers  	 									
 							} catch { 
 								$result = Show-RequestFailure($_.Exception)
 								return $result
@@ -1087,7 +1089,7 @@ function Get-Departments ([string]$departmentId,[string]$attributes,[string]$v2=
 								}
 							}
 						write-host $uri
-						$result = Invoke-RestMethod -Uri $uri -Method GET -ContentType 'application/json' -Headers $global:headers 	 								
+						$result = Invoke-WebRequest -Uri $uri -Method GET -UseBasicParsing -ContentType 'application/json' -Headers $global:headers 	 								
 							} catch { 
 								$result = Show-RequestFailure($_.Exception)
 								return $result
@@ -1159,7 +1161,7 @@ function Get-Users ([string]$userId,[string]$attributes,[string]$v2="T",[int]$st
 								}
 							}
 						write-host $uri
-						$result = Invoke-RestMethod -Uri $uri -Method GET -ContentType 'application/json' -Headers $global:headers 	 							
+						$result = Invoke-WebRequest -Uri $uri -Method GET -UseBasicParsing -ContentType 'application/json' -Headers $global:headers 	 							
 							} catch { 
 								$result = Show-RequestFailure($_.Exception)
 								return $result
@@ -1240,7 +1242,7 @@ function Get-Configurations ([string]$configId, [string]$attributes,[string]$v2=
 								}
 							}
 						write-host $uri
-						$result = Invoke-RestMethod -Uri $uri -Method GET -ContentType 'application/json' -Headers $global:headers    							
+						$result = Invoke-WebRequest -Uri $uri -Method GET -UseBasicParsing -ContentType 'application/json' -Headers $global:headers    							
 							} catch { 
 								$result = Show-RequestFailure($_.Exception)
 								return $result
@@ -1326,7 +1328,7 @@ function Get-Templates ([string]$templateId, [string]$attributes,[string]$v2='T'
 								}
 							}
 						write-host $uri
-						$result = Invoke-RestMethod -Uri $uri -Method GET -ContentType 'application/json' -Headers $global:headers  								
+						$result = Invoke-WebRequest -Uri $uri -Method GET -UseBasicParsing -ContentType 'application/json' -Headers $global:headers  								
 							} catch { 
 								$result = Show-RequestFailure($_.Exception)
 								return $result
@@ -1610,7 +1612,7 @@ function Get-Schedules ([string]$scheduleId, [string]$attributes,[string]$v2='T'
 								}
 							}
 						write-host $uri
-						$result = Invoke-RestMethod -Uri $uri -Method GET -ContentType 'application/json' -Headers $global:headers   
+						$result = Invoke-WebRequest -Uri $uri -Method GET -UseBasicParsing -ContentType 'application/json' -Headers $global:headers   
 										
 							} catch { 
 								$result = Show-RequestFailure($_.Exception)
